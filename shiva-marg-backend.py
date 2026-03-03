@@ -9,7 +9,7 @@ Run: uvicorn shivamarg_backend:app --host 0.0.0.0 --port 8000 --reload
 from fastapi import FastAPI, HTTPException, Depends, status, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, Field
 from pymongo import MongoClient, DESCENDING
 from bson import ObjectId
 from passlib.context import CryptContext
