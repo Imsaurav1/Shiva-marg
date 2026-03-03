@@ -148,39 +148,53 @@ class CommentUpdate(BaseModel):
 # ─────────────────────────────────────────────
 @app.post("/api/auth/register", status_code=201)
 def register(body: RegisterInput):
-    # Validate username
-    if not re.match(r"^[a-zA-Z0-9_]+$", body.username):
-        raise HTTPException(400, "Username can only contain letters, numbers, underscores")
+    try:
+        # Validate username
+        if not re.match(r"^[a-zA-Z0-9_]+$", body.username):
+            raise HTTPException(400, "Username can only contain letters, numbers, underscores")
 
-    # Check duplicates
-    if users_col.find_one({"email": body.email.lower()}):
-        raise HTTPException(400, "Email already registered")
-    if users_col.find_one({"username": body.username}):
-        raise HTTPException(400, "Username already taken")
+        # Check duplicates
+        if users_col.find_one({"email": body.email.lower()}):
+            raise HTTPException(400, "Email already registered")
+        if users_col.find_one({"username": body.username}):
+            raise HTTPException(400, "Username already taken")
 
-    doc = {
-        "username":     body.username,
-        "display_name": body.display_name or body.username,
-        "email":        body.email.lower(),
-        "password":     hash_password(body.password),
-        "avatar":       body.username[0].upper(),
-        "created_at":   datetime.utcnow(),
-    }
-    result = users_col.insert_one(doc)
-    doc["_id"] = result.inserted_id
+        doc = {
+            "username":     body.username,
+            "display_name": body.display_name or body.username,
+            "email":        body.email.lower(),
+            "password":     hash_password(body.password),
+            "avatar":       body.username[0].upper(),
+            "created_at":   datetime.utcnow(),
+        }
+        result = users_col.insert_one(doc)
+        doc["_id"] = result.inserted_id
 
-    token = create_token({"sub": str(result.inserted_id)})
-    return {"token": token, "user": serialize_user(doc)}
+        token = create_token({"sub": str(result.inserted_id)})
+        return {"token": token, "user": serialize_user(doc)}
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"REGISTER ERROR: {type(e).__name__}: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @app.post("/api/auth/login")
 def login(body: LoginInput):
-    user = users_col.find_one({"email": body.email.lower()})
-    if not user or not verify_password(body.password, user["password"]):
-        raise HTTPException(401, "Invalid email or password")
+    try:
+        user = users_col.find_one({"email": body.email.lower()})
+        if not user or not verify_password(body.password, user["password"]):
+            raise HTTPException(401, "Invalid email or password")
 
-    token = create_token({"sub": str(user["_id"])})
-    return {"token": token, "user": serialize_user(user)}
+        token = create_token({"sub": str(user["_id"])})
+        return {"token": token, "user": serialize_user(user)}
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"LOGIN ERROR: {type(e).__name__}: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @app.get("/api/auth/me")
